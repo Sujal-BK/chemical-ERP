@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Defines the types of inventory movements
+enum StockMovementType {
+  IN          // Purchasing or adding stock
+  OUT         // Selling stock via an invoice
+  ADJUSTMENT  // Manual corrections for damaged or lost goods
+}
+
+// 1. Admin User Table (For your two admins)
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  name          String
+  invoices      Invoice[]
+  inventoryLogs InventoryLog[] // Tracks who moved stock
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+// 2. Customer Table
+model Customer {
+  id        String    @id @default(uuid())
+  name      String
+  address   String
+  gstin     String?
+  invoices  Invoice[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// 3. Product Master Table
+model Product {
+  id           String         @id @default(uuid())
+  name         String
+  hsnCode      String
+  defaultRate  Float
+  taxRate      Float          @default(18.0)
+  
+  // Inventory fields
+  currentStock Float          @default(0) 
+  stockLogs    InventoryLog[] 
+  
+  items        InvoiceItem[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+// 4. Inventory Ledger (The Stock Log)
+model InventoryLog {
+  id          String            @id @default(uuid())
+  
+  product     Product           @relation(fields: [productId], references: [id])
+  productId   String
+  
+  type        StockMovementType 
+  quantity    Float             // The amount added or removed
+  reference   String?           // e.g., "Invoice PAAC/622" or "Warehouse Count"
+  
+  createdBy   User              @relation(fields: [createdById], references: [id])
+  createdById String
+  
+  createdAt   DateTime          @default(now())
+}
+
+// 5. Invoice Header Table
+model Invoice {
+  id           String        @id @default(uuid())
+  invoiceNo    String        @unique
+  date         DateTime      @default(now())
+  challanNo    String?
+  vehicleNo    String?
+  paymentTerms String?
+  pdfUrl       String?       // Cloudinary URL
+  
+  createdBy    User          @relation(fields: [createdById], references: [id])
+  createdById  String
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  customerId   String
+  items        InvoiceItem[]
+  
+  subTotal     Float
+  totalTax     Float
+  grandTotal   Float
+  
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+// 6. Invoice Line Items Table
+model InvoiceItem {
+  id            String  @id @default(uuid())
+  invoice       Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId     String
+  product       Product @relation(fields: [productId], references: [id])
+  productId     String
+  
+  qty           Float
+  rate          Float
+  taxableAmount Float
+  cgst          Float
+  sgst          Float
+  netAmount     Float
+}
