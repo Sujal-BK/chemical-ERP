@@ -22,6 +22,7 @@ enum StockMovementType {
 // 1. Admin User Table (For your two admins)
 model User {
   id            String         @id @default(uuid())
+  clerkId       String         @unique
   email         String         @unique
   name          String
   invoices      Invoice[]
