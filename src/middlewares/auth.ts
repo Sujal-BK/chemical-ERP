@@ -11,7 +11,10 @@ export const syncUser = async (req: Request, res: Response, next: NextFunction) 
     const { userId: clerkId } = getAuth(req);
 
     if (!clerkId) {
-      res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ 
+        success : false,
+        message: 'Unauthorized' 
+      });
       return;
     }
 
